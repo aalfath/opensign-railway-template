@@ -1,0 +1,36 @@
+{
+	admin off
+	auto_https off
+	persist_config off
+	servers {
+		# Railway's edge sits in front of us: keep the real client IP for OpenSign's audit trail.
+		trusted_proxies static private_ranges 100.64.0.0/10
+	}
+}
+
+:{$PORT:8080} {
+	encode gzip
+
+	# Health check for Railway (answers without login).
+	handle /healthz {
+		respond "ok" 200
+	}
+
+	# API (Parse server). Upstream's Caddyfile strips /api the same way.
+	handle_path /api/* {
+		reverse_proxy {$API_HOST:api.railway.internal}:{$API_PORT:8080} {
+			header_up X-Forwarded-Proto https
+		}
+	}
+
+	# Single-page app with client-side routing.
+	handle {
+		root * /srv
+		@assets path /assets/*
+		header @assets Cache-Control "public, max-age=31536000, immutable"
+		@html path / /index.html /env.js
+		header @html Cache-Control "no-cache"
+		try_files {path} /index.html
+		file_server
+	}
+}
