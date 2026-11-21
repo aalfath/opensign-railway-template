@@ -11,6 +11,18 @@ const email = (process.env.OPENSIGN_ADMIN_EMAIL || '').trim().toLowerCase();
 const password = process.env.OPENSIGN_ADMIN_PASSWORD || '';
 const log = (m) => console.log(`[railway] admin bootstrap: ${m}`);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+import fs from 'node:fs';
+
+// Upstream runs `parse-dbtool migrate` right after the server starts listening. Creating the admin
+// before that finishes makes Parse auto-create contracts_Teams, and the migration that creates it
+// then fails and stops every later migration. So wait until every migration file is recorded.
+async function migrationsDone() {
+  const files = fs.readdirSync('/usr/src/app/databases/migrations').filter((f) => /\.c?js$/.test(f));
+  const r = await fetch(`${base}/classes/Migration?limit=1000&keys=name`, { headers });
+  if (!r.ok) return false;
+  const done = new Set(((await r.json()).results || []).map((m) => m.name));
+  return files.every((f) => done.has(f) || done.has(f.replace(/\.c?js$/, '')));
+}
 
 async function call(fn, params = {}) {
   const r = await fetch(`${base}/functions/${fn}`, { method: 'POST', headers, body: JSON.stringify(params) });
@@ -26,6 +38,10 @@ async function main() {
       if (r.ok && (await r.json()).status === 'ok') break;
     } catch {}
     if (i > 300) return log('API did not become healthy; skipped');
+    await sleep(1000);
+  }
+  for (let i = 0; !(await migrationsDone().catch(() => false)); i++) {
+    if (i > 600) return log('database migrations did not finish within 10 minutes; skipped (see the parse-dbtool output above)');
     await sleep(1000);
   }
   if ((await call('checkadminexist')) === 'exist') return log('an administrator already exists; nothing to do');
