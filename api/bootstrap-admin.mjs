@@ -40,6 +40,7 @@ async function main() {
     if (i > 300) return log('API did not become healthy; skipped');
     await sleep(1000);
   }
+  if ((await call('checkadminexist').catch(() => '')) === 'exist') return log('an administrator already exists; nothing to do');
   for (let i = 0; !(await migrationsDone().catch(() => false)); i++) {
     if (i > 600) return log('database migrations did not finish within 10 minutes; skipped (see the parse-dbtool output above)');
     await sleep(1000);

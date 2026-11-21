@@ -1,3 +1,5 @@
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new/template/opensign-1?utm_medium=integration&utm_source=button&utm_campaign=opensign)
+
 # Deploy and Host OpenSign on Railway
 
 OpenSign is an open-source e-signature platform and a self-hosted alternative to DocuSign. You upload a PDF, place signature, initials, date and text fields, and send it to signers by e-mail or link. Completed documents are digitally signed and come with a completion certificate and an audit trail of who signed, when and from where.
